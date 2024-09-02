@@ -1,9 +1,18 @@
 from typing import Optional
+from urllib import response
 from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
-
+from sms.controller import SMS
 from sms.models import SMSModel
+from response_templates.help_tmpl import (
+    help_template,
+    help_send_template,
+    help_create_template,
+    help_info_template,
+)
 
+
+af_sms = SMS()
 app = FastAPI()
 origins = [
     "*",
@@ -33,6 +42,10 @@ async def receive_sms(
     to: str = Form(...),
     networkCode: Optional[str] = Form(None),
 ):
+    # TODO
+    # Validate input text
+    # Connect supabase DB
+    # Process user requests/command
 
     sms = SMSModel(
         date=date,
@@ -44,6 +57,40 @@ async def receive_sms(
         networkCode=networkCode,
     )
     command, *segments = sms.text.split(" ")
-    print(command, segments)
+
+    segments = [item for item in segments if item]  # remove empty strings
+    response_to_user = ""
+
+    # HELP COMMANDS
+    match command.lower():
+        case "help":
+            if not len(segments):
+                response_to_user = help_template
+            else:
+                match segments[0]:
+                    case "info":
+                        response_to_user = help_info_template
+                    case "create":
+                        response_to_user = help_create_template
+                    case "send":
+                        response_to_user = help_send_template
+
+    match command.lower():
+        case "create":
+            response_to_user = "Account created successfully"
+
+    match command.lower():
+        case "info":
+            response_to_user = "Account number: xxxxxxxxxx\Balance: 5,000,000"
+
+    match command.lower():
+        case "send":
+            amount, beneficiary_number = segments
+            response_to_user = (
+                f"Successfully transfered N{amount} to {beneficiary_number}"
+            )
+
+    print(response_to_user)
+    af_sms.send([sms.from_], response_to_user)
 
     return True
