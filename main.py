@@ -43,9 +43,13 @@ async def receive_sms(
     networkCode: Optional[str] = Form(None),
 ):
     # TODO
-    # Validate input text
     # Connect supabase DB
     # Process user requests/command
+
+    is_valid = af_sms.check_structure(text.lower())
+    if not is_valid[0]:
+        af_sms.send([from_], is_valid[1])
+        return True
 
     sms = SMSModel(
         date=date,
@@ -81,7 +85,7 @@ async def receive_sms(
 
     match command.lower():
         case "info":
-            response_to_user = "Account number: xxxxxxxxxx\Balance: 5,000,000"
+            response_to_user = "Account number: xxxxxxxxxx\nBalance: 5,000,000"
 
     match command.lower():
         case "send":
