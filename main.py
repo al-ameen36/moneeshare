@@ -43,7 +43,6 @@ async def receive_sms(
     networkCode: Optional[str] = Form(None),
 ):
     # TODO
-    # Connect supabase DB
     # Process user requests/command
 
     is_valid = af_sms.check_structure(text.lower())
@@ -61,8 +60,7 @@ async def receive_sms(
         networkCode=networkCode,
     )
     command, *segments = sms.text.split(" ")
-
-    segments = [item for item in segments if item]  # remove empty strings
+    segments = [item.strip() for item in segments if item]  # remove empty strings
     response_to_user = ""
 
     # HELP COMMANDS
