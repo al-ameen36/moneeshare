@@ -1,7 +1,7 @@
 from typing import Optional
-from urllib import response
 from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
+from accounts.controller import Account
 from sms.controller import SMS
 from sms.models import SMSModel
 from response_templates.help_tmpl import (
@@ -10,9 +10,15 @@ from response_templates.help_tmpl import (
     help_create_template,
     help_info_template,
 )
-
+from response_templates.create_tmpl import create_user_template
+from response_templates.account_tmpl import account_info_template
+from users.controller import User
+from users.schemas import UserType
 
 af_sms = SMS()
+user_db = User()
+account_db = Account()
+
 app = FastAPI()
 origins = [
     "*",
@@ -42,9 +48,6 @@ async def receive_sms(
     to: str = Form(...),
     networkCode: Optional[str] = Form(None),
 ):
-    # TODO
-    # Process user requests/command
-
     is_valid = af_sms.check_structure(text.lower())
     if not is_valid[0]:
         af_sms.send([from_], is_valid[1])
@@ -76,23 +79,57 @@ async def receive_sms(
                         response_to_user = help_create_template
                     case "send":
                         response_to_user = help_send_template
-
     match command.lower():
         case "create":
-            response_to_user = "Account created successfully"
+            user = user_db.create(UserType(phone_number=sms.from_, pin="1234"))
+            if user[0]:
+                user_account = UserType(**user[1])
+                response_to_user = create_user_template.format(
+                    account_number=user_account.phone_number.replace("+234", ""),
+                    account_balance=10000.0,
+                )
+            else:
+                response_to_user = user[1]
 
     match command.lower():
         case "info":
-            response_to_user = "Account number: xxxxxxxxxx\nBalance: 5,000,000"
+            user = user_db.get(UserType(phone_number=sms.from_, pin="1234"))
+            if user[0]:
+                user_account = UserType(**user[1])
+                response_to_user = account_info_template.format(
+                    account_number=user_account.accounts[0].account_number,
+                    account_balance=user_account.accounts[0].balance,
+                )
+            else:
+                response_to_user = user[1]
 
     match command.lower():
         case "send":
+            print(segments)
             amount, beneficiary_number = segments
-            response_to_user = (
-                f"Successfully transfered N{amount} to {beneficiary_number}"
-            )
+            try:
+                amount = float(amount)
+            except ValueError:
+                response_to_user = "Provide a valid amount"
+                af_sms.send([sms.from_], response_to_user)
+                return True
 
-    print(response_to_user)
-    af_sms.send([sms.from_], response_to_user)
+            response = user_db.send(
+                sender_number=sms.from_,
+                beneficiary_number=beneficiary_number,
+                amount=amount,
+            )
+            if response[0]:
+                response_to_user = response
+            else:
+                response_to_user = response[1]
+
+    if type(response_to_user) == list and len(response_to_user) > 2:
+        _, beneficiary_number = segments
+        af_sms.send([beneficiary_number], response_to_user[2])
+    if type(response_to_user) == list:
+        af_sms.send([sms.from_], response_to_user[1])
+    if type(response_to_user) == str:
+        af_sms.send([sms.from_], response_to_user)
 
     return True
