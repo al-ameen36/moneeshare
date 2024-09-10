@@ -19,7 +19,7 @@ africastalking.initialize(username, api_key)
 
 class SMS:
     patterns = {
-        "send": {"regex": r"^send \d+ \+\d{13}$", "msg": ""},
+        "send": {"regex": r"^send \d+ (\+?\d{1,3})?\d{8,13}$", "msg": ""},
         "help": {"regex": r"^help(?: (info|send|create))?$", "msg": ""},
         "info": {"regex": r"^info$", "msg": ""},
         "create": {"regex": r"^create$", "msg": ""},

@@ -38,6 +38,12 @@ async def home():
     return {"app": "Monee share", "status": "ok"}
 
 
+# def split_phone_number(phone_number: str):
+#     if phone_number.startswith("+") or len(phone_number) > 11:
+#         return (phone_number[:4], phone_number[4:])
+#     return (None, phone_number)
+
+
 @app.post("/incoming-messages")
 async def receive_sms(
     date: Optional[str] = Form(None),
@@ -79,6 +85,7 @@ async def receive_sms(
                         response_to_user = help_create_template
                     case "send":
                         response_to_user = help_send_template
+
     match command.lower():
         case "create":
             user = user_db.create(UserType(phone_number=sms.from_, pin="1234"))
@@ -105,7 +112,6 @@ async def receive_sms(
 
     match command.lower():
         case "send":
-            print(segments)
             amount, beneficiary_number = segments
             try:
                 amount = float(amount)
@@ -113,6 +119,9 @@ async def receive_sms(
                 response_to_user = "Provide a valid amount"
                 af_sms.send([sms.from_], response_to_user)
                 return True
+
+            if len(beneficiary_number) < 11:
+                beneficiary_number = "+234" + beneficiary_number
 
             response = user_db.send(
                 sender_number=sms.from_,
@@ -127,9 +136,9 @@ async def receive_sms(
     if type(response_to_user) == list and len(response_to_user) > 2:
         _, beneficiary_number = segments
         af_sms.send([beneficiary_number], response_to_user[2])
-    if type(response_to_user) == list:
+    elif type(response_to_user) == list:
         af_sms.send([sms.from_], response_to_user[1])
-    if type(response_to_user) == str:
+    else:
         af_sms.send([sms.from_], response_to_user)
 
     return True

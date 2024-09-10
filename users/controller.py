@@ -77,7 +77,7 @@ class User:
                 if db_sender.accounts[0].balance < amount:
                     return [
                         False,
-                        f"Insufficient funds N{amount}\nBalance: N{db_sender.accounts[0].balance}",
+                        f"Insufficient funds to send N{amount}\nBalance: N{db_sender.accounts[0].balance}",
                     ]
 
                 if db_beneficiary[0]:
