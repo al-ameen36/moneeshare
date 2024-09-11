@@ -71,6 +71,7 @@ async def receive_sms(
     command, *segments = sms.text.split(" ")
     segments = [item.strip() for item in segments if item]  # remove empty strings
     response_to_user = ""
+    print(command, segments)
 
     # HELP COMMANDS
     match command.lower():
@@ -120,7 +121,7 @@ async def receive_sms(
                 af_sms.send([sms.from_], response_to_user)
                 return True
 
-            if len(beneficiary_number) < 11:
+            if len(beneficiary_number) <= 11:
                 beneficiary_number = "+234" + beneficiary_number
 
             response = user_db.send(
@@ -135,9 +136,14 @@ async def receive_sms(
 
     if type(response_to_user) == list and len(response_to_user) > 2:
         _, beneficiary_number = segments
+        if len(beneficiary_number) <= 11:
+            beneficiary_number = "+234" + beneficiary_number
         af_sms.send([beneficiary_number], response_to_user[2])
+        af_sms.send([sms.from_], response_to_user[1])
+
     elif type(response_to_user) == list:
         af_sms.send([sms.from_], response_to_user[1])
+
     else:
         af_sms.send([sms.from_], response_to_user)
 
