@@ -8,8 +8,11 @@ from response_templates.create_tmpl import (
 from response_templates.account_tmpl import (
     account_not_found_template,
 )
+from bank.controller import Bank
+
 
 account_db = Account()
+bank_client = Bank()
 
 
 class User:
@@ -19,6 +22,18 @@ class User:
 
     def create(self, user: UserType):
         try:
+            print(user)
+            phone_number = user.phone_number.replace("+234", "")
+            payload = {
+                "acc_name": f"customer_{phone_number}",
+                "phone": phone_number,
+                "bank_code": "000",
+                "customer_name": f"customer_{phone_number}",
+                "bvn": "12345678901",
+                "nin": "12345788901",
+            }
+            bank_response = bank_client.create_account(**payload)
+            print(bank_response)
             response = (
                 self.db.table("users")
                 .insert({"phone_number": user.phone_number, "pin": user.pin})
