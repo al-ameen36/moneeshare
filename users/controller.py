@@ -22,24 +22,26 @@ class User:
 
     def create(self, user: UserType):
         try:
-            print(user)
             phone_number = user.phone_number.replace("+234", "")
             payload = {
                 "acc_name": f"customer_{phone_number}",
                 "phone": phone_number,
                 "bank_code": "000",
                 "customer_name": f"customer_{phone_number}",
-                "bvn": "12345678901",
+                "bvn": "22222222222",
                 "nin": "12345788901",
             }
             bank_response = bank_client.create_account(**payload)
-            print(bank_response)
             response = (
                 self.db.table("users")
                 .insert({"phone_number": user.phone_number, "pin": user.pin})
                 .execute()
             )
-            user_account = account_db.create(UserType(**response.data[0]))
+            if "data" in bank_response:
+                user_account = account_db.create(
+                    UserType(**response.data[0]),
+                    account_number=bank_response["data"]["account_number"],
+                )
             return [True, response.data[0]]
         except Exception as error:
             if "duplicate" in error.__dict__.get("message"):
@@ -97,6 +99,9 @@ class User:
 
                 if db_beneficiary[0]:
                     db_beneficiary = UserType(**db_beneficiary[1])
+                    bank_client.transfer(
+                        db_beneficiary.accounts[0].account_number, amount
+                    )
                     beneficiary_new_balance = (
                         db_beneficiary.accounts[0].balance + amount
                     )

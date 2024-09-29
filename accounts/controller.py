@@ -7,13 +7,13 @@ class Account:
     def __init__(self):
         self.db = db
 
-    def create(self, user: UserType):
+    def create(self, user: UserType, account_number: str):
         try:
             response = (
                 self.db.table("accounts")
                 .insert(
                     {
-                        "account_number": user.phone_number.replace("+234", ""),
+                        "account_number": account_number,
                         "user_id": user.id,
                     }
                 )

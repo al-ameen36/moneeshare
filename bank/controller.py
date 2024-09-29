@@ -3,7 +3,11 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-urls = {"create account": f"{os.environ.get("KORA_BASE_URL")}/virtual-bank-account"}
+urls = {
+    "create account": f"{os.environ.get("KORA_BASE_URL")}/virtual-bank-account",
+    "transfer":f"{os.environ.get("KORA_BASE_URL")}/virtual-bank-account/sandbox/credit",
+}
+headers = {"Authorization": f"Bearer {os.environ.get('KORA_SECRET')}"}
 
 
 class Bank:
@@ -24,12 +28,21 @@ class Bank:
             "customer": {"name": customer_name},
             "kyc": {"bvn": bvn, "nin": nin},
         }
-        headers = {"Authorization": f"Bearer {os.environ.get('KORA_SECRET')}"}
         try:
             response = requests.post(
                 url=urls["create account"], json=payload, headers=headers
             )
             print(response.json())
+        except Exception as error:
+            print(error)
+
+        return response.json()
+    
+    def transfer(self, beneficiary:str, amount:float):
+        try:
+                payload = {"reference": beneficiary, "amount": amount}
+                response = requests.get(url=urls["transfer"], json=payload, headers=headers)
+                print(response.json())
         except Exception as error:
             print(error)
 
