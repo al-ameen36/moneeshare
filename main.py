@@ -38,12 +38,6 @@ async def home():
     return {"app": "Monee share", "status": "ok"}
 
 
-# def split_phone_number(phone_number: str):
-#     if phone_number.startswith("+") or len(phone_number) > 11:
-#         return (phone_number[:4], phone_number[4:])
-#     return (None, phone_number)
-
-
 @app.post("/incoming-messages")
 async def receive_sms(
     date: Optional[str] = Form(None),
@@ -102,6 +96,7 @@ async def receive_sms(
     match command.lower():
         case "info":
             user = user_db.get(UserType(phone_number=sms.from_, pin="1234"))
+            print(user)
             if user[0]:
                 user_account = UserType(**user[1])
                 response_to_user = account_info_template.format(
@@ -147,4 +142,5 @@ async def receive_sms(
     else:
         af_sms.send([sms.from_], response_to_user)
 
+    print(response_to_user)
     return True

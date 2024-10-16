@@ -22,7 +22,7 @@ class SMS:
         "send": {"regex": r"^send \d+ (\+?\d{1,3})?\d{8,13}$", "msg": ""},
         "help": {"regex": r"^help(?: (info|send|create))?$", "msg": ""},
         "info": {"regex": r"^info$", "msg": ""},
-        "create": {"regex": r"^create$", "msg": ""},
+        "create": {"regex": r"^create(?: \d{10})?$", "msg": ""},
     }
 
     def __init__(self):

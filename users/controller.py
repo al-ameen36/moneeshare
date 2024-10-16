@@ -31,24 +31,21 @@ class User:
                 "bvn": "22222222222",
                 "nin": "12345788901",
             }
-            bank_response = bank_client.create_account(**payload)
             response = (
                 self.db.table("users")
                 .insert({"phone_number": user.phone_number, "pin": user.pin})
                 .execute()
             )
-            if "data" in bank_response:
-                user_account = account_db.create(
-                    UserType(**response.data[0]),
-                    account_number=bank_response["data"]["account_number"],
-                )
+            user_account = account_db.create(
+                UserType(**response.data[0]),
+                account_number=phone_number,
+            )
             return [True, response.data[0]]
         except Exception as error:
-            if "duplicate" in error.__dict__.get("message"):
+            print(error)
+            if "duplicate" in error.message:
                 return [False, create_exists_template]
-            else:
-                print(error)
-                return [False, create_failed_template]
+            return [False, create_failed_template]
 
     def get(self, user: UserType):
         try:
@@ -99,9 +96,6 @@ class User:
 
                 if db_beneficiary[0]:
                     db_beneficiary = UserType(**db_beneficiary[1])
-                    bank_client.transfer(
-                        db_beneficiary.accounts[0].account_number, amount
-                    )
                     beneficiary_new_balance = (
                         db_beneficiary.accounts[0].balance + amount
                     )
@@ -110,8 +104,8 @@ class User:
                     account_db.update(db_beneficiary.id, beneficiary_new_balance)
                     return [
                         True,
-                        f"Successfully transfered N{amount} to {db_beneficiary.accounts[0].account_number}\nBalance: N{sender_new_balance}",
-                        f"You just recieved N{amount} from {db_sender.accounts[0].account_number}\nBalance: N{beneficiary_new_balance}",
+                        f"Successfully transfered N{amount} \nTo {db_beneficiary.accounts[0].account_number}\nBalance: N{sender_new_balance}",
+                        f"You just recieved N{amount} \nFrom {db_sender.accounts[0].account_number}\nBalance: N{beneficiary_new_balance}",
                     ]
                 else:
                     db_beneficiary = self.create(
@@ -128,8 +122,8 @@ class User:
                     )
                     return [
                         True,
-                        f"Successfully transfered N{amount} to {beneficiary_account_number}",
-                        f"Welcome to moneeshare. You just recieved N{amount} from {db_sender.accounts[0].account_number}.\nAccount Number: {beneficiary_account_number}\nBalance: N{beneficiary_new_balance}",
+                        f"Successfully transfered N{amount} \nTo {beneficiary_account_number}\nBalance: N{sender_new_balance}",
+                        f"Welcome to moneeshare. You just recieved N{amount} \nFrom {db_sender.accounts[0].account_number}.\nAccount Number: {beneficiary_account_number}\nBalance: N{beneficiary_new_balance}",
                     ]
 
             else:

@@ -1,8 +1,8 @@
 help_template = (
-    "Hello welcome to Monee share\n."
-    "You can perform the following actions\n."
-    "CREATE, SEND and INFO\n."
-    "To learn more about each command send E.g. help create"
+    "Hello welcome to Monee share\n"
+    "You can perform the following actions\n"
+    "CREATE, SEND and INFO\n"
+    "To learn more about each command send\nE.g. mshare help create"
 )
 
 help_info_template = "Use this command to get your account info.\n" "Format -> info"
