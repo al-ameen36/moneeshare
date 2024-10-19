@@ -157,7 +157,9 @@ async def receive_sms(
             otp = generate_otp()
             print(otp)
             account_db.add_transaction(sms.from_, sms.text, otp)
-            response_to_user = f"Send {otp} to 34461 to process your transaction"
+            response_to_user = (
+                f"Send 'mshare {otp}' to 34461 to process your transaction"
+            )
 
     # Send response back to the user
     if type(response_to_user) == list:
