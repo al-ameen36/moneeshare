@@ -1,7 +1,10 @@
+import re
 from typing import Optional
 from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
+import pyotp
 from accounts.controller import Account
+from accounts.otp import generate_otp
 from sms.controller import SMS
 from sms.models import SMSModel
 from response_templates.help_tmpl import (
@@ -48,11 +51,6 @@ async def receive_sms(
     to: str = Form(...),
     networkCode: Optional[str] = Form(None),
 ):
-    is_valid = af_sms.check_structure(text.lower())
-    if not is_valid[0]:
-        af_sms.send([from_], is_valid[1])
-        return True
-
     sms = SMSModel(
         date=date,
         from_=from_,
@@ -62,6 +60,54 @@ async def receive_sms(
         to=to,
         networkCode=networkCode,
     )
+
+    # Check if the text is a 6-digit OTP (no command, just numbers)
+    otp_pattern = r"^\d{6}$"
+    if re.match(otp_pattern, sms.text.strip()):
+        # Handle OTP automatically if it's a 6-digit number
+        res = account_db.validate_transaction(sms.from_, sms.text.strip())
+        if res[0]:
+            transaction = res[1]
+            command, *segments = transaction["command"].split(" ")
+            amount, beneficiary_number = segments
+            try:
+                amount = float(amount)
+            except ValueError:
+                response_to_user = "Provide a valid amount"
+                af_sms.send([sms.from_], response_to_user)
+                return True
+
+            if len(beneficiary_number) <= 11:
+                beneficiary_number = "+234" + beneficiary_number
+
+            response = user_db.send(
+                sender_number=sms.from_,
+                beneficiary_number=beneficiary_number,
+                amount=amount,
+            )
+
+            # Handle response
+            if response[0]:
+                response_to_user = response
+                # Delete transaction after processing
+                account_db.delete_transaction(transaction["id"])
+            else:
+                response_to_user = response[1]
+
+            # Send response to beneficiary and sender
+            if type(response_to_user) == list and len(response_to_user) > 2:
+                _, beneficiary_number = segments
+            if len(beneficiary_number) <= 11:
+                beneficiary_number = "+234" + beneficiary_number
+
+            af_sms.send([beneficiary_number], response_to_user[2])
+            af_sms.send([sms.from_], response_to_user[1])
+            return True
+        else:
+            af_sms.send([sms.from_], "No pending transactions found")
+            return True
+
+    # Split the input string to extract the command
     command, *segments = sms.text.split(" ")
     segments = [item.strip() for item in segments if item]  # remove empty strings
     response_to_user = ""
@@ -108,37 +154,14 @@ async def receive_sms(
 
     match command.lower():
         case "send":
-            amount, beneficiary_number = segments
-            try:
-                amount = float(amount)
-            except ValueError:
-                response_to_user = "Provide a valid amount"
-                af_sms.send([sms.from_], response_to_user)
-                return True
+            otp = generate_otp()
+            print(otp)
+            account_db.add_transaction(sms.from_, sms.text, otp)
+            response_to_user = f"Send {otp} to 34461 to process your transaction"
 
-            if len(beneficiary_number) <= 11:
-                beneficiary_number = "+234" + beneficiary_number
-
-            response = user_db.send(
-                sender_number=sms.from_,
-                beneficiary_number=beneficiary_number,
-                amount=amount,
-            )
-            if response[0]:
-                response_to_user = response
-            else:
-                response_to_user = response[1]
-
-    if type(response_to_user) == list and len(response_to_user) > 2:
-        _, beneficiary_number = segments
-        if len(beneficiary_number) <= 11:
-            beneficiary_number = "+234" + beneficiary_number
-        af_sms.send([beneficiary_number], response_to_user[2])
+    # Send response back to the user
+    if type(response_to_user) == list:
         af_sms.send([sms.from_], response_to_user[1])
-
-    elif type(response_to_user) == list:
-        af_sms.send([sms.from_], response_to_user[1])
-
     else:
         af_sms.send([sms.from_], response_to_user)
 

@@ -36,3 +36,40 @@ class Account:
         except Exception as error:
             print(error)
             return [True, "Something went wrong. Try again"]
+
+    def add_transaction(self, phone: str, transaction: str, otp):
+        try:
+            response = (
+                self.db.table("transactions")
+                .insert({"account": phone, "command": transaction, "otp": otp})
+                .execute()
+            )
+            return [True, response]
+        except Exception as error:
+            print(error)
+            return [True, "Something went wrong. Try again"]
+
+    def validate_transaction(self, phone: str, pin: str):
+        try:
+            transaction = (
+                self.db.table("transactions").select("*").eq("account", phone).execute()
+            )
+            print(transaction)
+            if transaction.data[0]:
+                transaction = transaction.data[0]
+                if transaction["otp"] == pin:
+                    return [True, transaction]
+                else:
+                    return [False, "Something went wrong. Try again"]
+            else:
+                return [False, "Something went wrong. Try again"]
+        except Exception as error:
+            print(error)
+            return [False, "Something went wrong. Try again"]
+
+    def delete_transaction(self, id: int):
+        try:
+            self.db.table("transactions").delete().eq("id", id).execute()
+        except Exception as error:
+            print(error)
+            return [False, "Something went wrong. Try again"]
